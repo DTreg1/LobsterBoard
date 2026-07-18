@@ -144,7 +144,7 @@
       refreshInterval: 60
     },
     preview: `<div style="text-align:center;padding:8px;">
-      <div style="font-size:20px;color:#3fb950;font-weight:600;">29 GB</div>
+      <div style="font-size:20px;color:#3fb950;">29 GB</div>
       <div style="font-size:11px;color:#8b949e;">free · 88% full</div>
     </div>`,
     generateHtml: (props) => `
@@ -160,10 +160,10 @@
                 stroke-dasharray="125.66" stroke-dashoffset="125.66" stroke-linecap="round"
                 transform="rotate(-90 24 24)" style="transition: stroke-dashoffset 0.6s ease, stroke 0.4s ease;"/>
             </svg>
-            <div class="kpi-ring-label" id="${props.id}-pct" style="font-size:10px;">—</div>
+            <div class="kpi-ring-label" id="${props.id}-pct">—</div>
           </div>
           <div class="kpi-data">
-            <div class="kpi-value" id="${props.id}-free" style="font-weight:600;">—</div>
+            <div class="kpi-value" id="${props.id}-free">—</div>
             <div class="kpi-label" id="${props.id}-sub">free</div>
           </div>
         </div>
