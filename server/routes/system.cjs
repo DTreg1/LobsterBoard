@@ -4,6 +4,54 @@ const os = require('os');
 const { sendJson, sendError } = require('../response.cjs');
 const cfg = require('../config.cjs');
 
+// ── OpenClaw auth-status helpers ──
+// OpenClaw 2026.7.x migrated ~/.openclaw/agents/main/agent/auth-profiles.json into
+// the agent SQLite DB (auth_profile_store, store_key "primary"). Read whichever store
+// this install uses, newest layout first, then the legacy JSON file.
+function loadOpenClawAuthProfiles(home) {
+  const agentDir = path.join(home, '.openclaw', 'agents', 'main', 'agent');
+  const dbPath = path.join(agentDir, 'openclaw-agent.sqlite');
+  if (fs.existsSync(dbPath)) {
+    try {
+      const { DatabaseSync } = require('node:sqlite');
+      // Read-only: safe alongside the live gateway (SQLite WAL allows concurrent readers).
+      const db = new DatabaseSync(dbPath, { readOnly: true });
+      try {
+        const row = db.prepare('SELECT store_json FROM auth_profile_store WHERE store_key = ?').get('primary')
+                 || db.prepare('SELECT store_json FROM auth_profile_store LIMIT 1').get();
+        if (row && row.store_json) {
+          const parsed = JSON.parse(row.store_json);
+          if (parsed && parsed.profiles) return parsed.profiles;
+        }
+      } finally {
+        db.close();
+      }
+    } catch (_) { /* fall through to legacy file */ }
+  }
+  const legacyPath = path.join(agentDir, 'auth-profiles.json');
+  if (fs.existsSync(legacyPath)) {
+    try { return JSON.parse(fs.readFileSync(legacyPath, 'utf8')).profiles || null; } catch (_) {}
+  }
+  return null;
+}
+
+// Map the primary Anthropic auth profile to the widget's mode string.
+// Subscription/OAuth logins (e.g. claude-cli) => "Monthly" (Anthropic Max);
+// an explicit API key => "API". Anything else is unknown (widget shows "—").
+function deriveAnthropicAuthMode(profiles, orderList) {
+  if (!profiles || typeof profiles !== 'object') return { mode: 'unknown', primary: null };
+  const first = Array.isArray(orderList) && orderList.length ? orderList[0] : null;
+  const orderedKey = first ? (String(first).includes(':') ? first : `anthropic:${first}`) : null;
+  const key = (orderedKey && profiles[orderedKey]) ? orderedKey
+    : (Object.keys(profiles).find(k => /^anthropic:/i.test(k))
+      || Object.keys(profiles).find(k => /(claude|anthropic)/i.test(k))
+      || null);
+  const type = key && profiles[key] ? profiles[key].type : null;
+  const mode = (type === 'oauth' || type === 'token' || type === 'subscription') ? 'Monthly'
+    : (type === 'api_key' ? 'API' : 'unknown');
+  return { mode, primary: key };
+}
+
 function handle(req, res, pathname, parsedUrl, ctx) {
   if (req.method === 'GET' && pathname === '/api/cron') {
     const cronFile = path.join(os.homedir(), '.openclaw', 'cron', 'jobs.json');
@@ -79,20 +127,21 @@ function handle(req, res, pathname, parsedUrl, ctx) {
   if (req.method === 'GET' && pathname === '/api/auth') {
     try {
       const home = os.homedir();
-      const configPath = path.join(home, '.openclaw', 'openclaw.json');
-      const authProfilesPath = path.join(home, '.openclaw', 'agents', 'main', 'agent', 'auth-profiles.json');
-      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      const authProfiles = JSON.parse(fs.readFileSync(authProfilesPath, 'utf8'));
+      const profiles = loadOpenClawAuthProfiles(home);
+      if (!profiles) { sendJson(res, 200, { status: 'unavailable' }); return true; }
 
-      const anthropicOrder = config.auth?.order?.anthropic || [];
-      const primaryId = anthropicOrder[0] || 'anthropic:default';
-      const profileKey = primaryId.includes(':') ? primaryId : `anthropic:${primaryId}`;
-      const profileType = authProfiles.profiles?.[profileKey]?.type;
-      const mode = profileType === 'token' ? 'Monthly' : 'API';
+      let orderList = [];
+      try {
+        const config = JSON.parse(fs.readFileSync(path.join(home, '.openclaw', 'openclaw.json'), 'utf8'));
+        orderList = (config.auth && config.auth.order && config.auth.order.anthropic) || [];
+      } catch (_) { /* order is optional */ }
 
-      sendJson(res, 200, { status: 'ok', mode, primary: profileKey });
+      const { mode, primary } = deriveAnthropicAuthMode(profiles, orderList);
+      if (mode === 'unknown') { sendJson(res, 200, { status: 'unavailable', primary }); return true; }
+      sendJson(res, 200, { status: 'ok', mode, primary });
     } catch (e) {
-      sendError(res, `Auth status error: ${e.message}`);
+      // Never 500 the widget — degrade to "—"
+      sendJson(res, 200, { status: 'unavailable', message: String((e && e.message) || e) });
     }
     return true;
   }
@@ -284,3 +333,6 @@ function handle(req, res, pathname, parsedUrl, ctx) {
 module.exports = function(context) {
   return { handle: (req, res, pathname, parsedUrl) => handle(req, res, pathname, parsedUrl, context) };
 };
+// Exposed for unit testing (pure mapping) and reuse.
+module.exports.deriveAnthropicAuthMode = deriveAnthropicAuthMode;
+module.exports.loadOpenClawAuthProfiles = loadOpenClawAuthProfiles;
