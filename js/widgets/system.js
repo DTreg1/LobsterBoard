@@ -122,6 +122,99 @@
     `
   };
 
+  // Crash-relevant disk widget: headline is FREE space (GB), color-coded by how
+  // much runway you have left — because "Disk Full" is about free bytes, not %.
+  // On macOS APFS every volume shares one free pool, so `available` from any
+  // mount is the true container free space. Thresholds (warnGB/critGB) are
+  // overridable via config; the ring shows true container fullness.
+  WIDGETS['disk-free'] = {
+    name: 'Disk Free',
+    icon: '🛟',
+    category: 'small',
+    description: 'Free disk space (GB) with green/amber/red crash-risk thresholds. The number that actually predicts "Disk Full". Supports remote servers.',
+    defaultWidth: 170,
+    defaultHeight: 100,
+    hasApiKey: false,
+    properties: {
+      title: 'Disk Free',
+      server: 'local',
+      path: '/',
+      warnGB: 20,
+      critGB: 10,
+      refreshInterval: 60
+    },
+    preview: `<div style="text-align:center;padding:8px;">
+      <div style="font-size:20px;color:#3fb950;font-weight:600;">29 GB</div>
+      <div style="font-size:11px;color:#8b949e;">free · 88% full</div>
+    </div>`,
+    generateHtml: (props) => `
+      <div class="dash-card" id="widget-${props.id}" style="height:100%;">
+        <div class="dash-card-head">
+          <span class="dash-card-title">${renderIcon('disk')} ${props.title || 'Disk Free'}</span>
+        </div>
+        <div class="dash-card-body" style="display:flex;align-items:center;justify-content:center;gap:10px;">
+          <div class="kpi-ring-wrap kpi-ring-sm">
+            <svg class="kpi-ring" viewBox="0 0 48 48">
+              <circle cx="24" cy="24" r="20" fill="none" stroke="var(--bg-tertiary)" stroke-width="4"/>
+              <circle id="${props.id}-ring" cx="24" cy="24" r="20" fill="none" stroke="#3fb950" stroke-width="4"
+                stroke-dasharray="125.66" stroke-dashoffset="125.66" stroke-linecap="round"
+                transform="rotate(-90 24 24)" style="transition: stroke-dashoffset 0.6s ease, stroke 0.4s ease;"/>
+            </svg>
+            <div class="kpi-ring-label" id="${props.id}-pct" style="font-size:10px;">—</div>
+          </div>
+          <div class="kpi-data">
+            <div class="kpi-value" id="${props.id}-free" style="font-weight:600;">—</div>
+            <div class="kpi-label" id="${props.id}-sub">free</div>
+          </div>
+        </div>
+      </div>`,
+    generateJs: (props) => `
+      // Disk Free Widget: ${props.id} — ${props.server === 'local' ? 'local SSE' : 'remote: ' + props.server}
+      onStats('${props.server || 'local'}', function(data) {
+        const ringEl = document.getElementById('${props.id}-ring');
+        const pctEl  = document.getElementById('${props.id}-pct');
+        const freeEl = document.getElementById('${props.id}-free');
+        const subEl  = document.getElementById('${props.id}-sub');
+        if (!ringEl || !freeEl) return;
+        if (data._offline) {
+          freeEl.textContent = 'offline'; freeEl.style.color = '';
+          pctEl.textContent = '⚠️'; subEl.textContent = '—';
+          ringEl.style.strokeDashoffset = 125.66;
+          return;
+        }
+        let d;
+        if (Array.isArray(data.disk)) {
+          if (data.disk.length === 0) return;
+          const targetMount = '${props.path || '/'}';
+          d = data.disk.find(x => x.mount === targetMount) || data.disk[0];
+        } else if (data.disk) {
+          d = data.disk;
+        } else {
+          return;
+        }
+        const GB = 1e9;
+        const size = d.size || d.total || 0;
+        // True free space: prefer the shared-container available bytes.
+        const freeBytes = (d.available != null) ? d.available
+          : (d.free != null) ? d.free
+          : Math.max(0, size - (d.used || 0));
+        const freeGB = freeBytes / GB;
+        const totalGB = size / GB;
+        const pctFull = size > 0 ? Math.max(0, Math.min(100, (size - freeBytes) / size * 100)) : 0;
+        const warn = ${Number(props.warnGB) || 20};
+        const crit = ${Number(props.critGB) || 10};
+        const color = freeGB <= crit ? '#f85149' : (freeGB <= warn ? '#d29922' : '#3fb950');
+        const circ = 125.66;
+        ringEl.style.strokeDashoffset = circ - (pctFull / 100) * circ;
+        ringEl.style.stroke = color;
+        pctEl.textContent = Math.round(pctFull) + '%';
+        freeEl.textContent = (freeGB < 10 ? freeGB.toFixed(1) : Math.round(freeGB)) + ' GB';
+        freeEl.style.color = color;
+        subEl.textContent = 'free · of ' + Math.round(totalGB) + ' GB';
+      }, ${(props.refreshInterval || 60) * 1000});
+    `
+  };
+
   WIDGETS['uptime-monitor'] = {
     name: 'Uptime Monitor',
     icon: '📡',
