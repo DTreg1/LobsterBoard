@@ -34,7 +34,7 @@ function render(data, props = {}) {
   return {
     free: els['w1-free'] && els['w1-free'].textContent,
     color: els['w1-free'] && els['w1-free'].style.color,
-    full: els['w1-pct'] && els['w1-pct'].textContent,
+    pct: els['w1-pct'] && els['w1-pct'].textContent,
     ring: els['w1-ring'] && els['w1-ring'].style.stroke,
     sub: els['w1-sub'] && els['w1-sub'].textContent,
   };
@@ -54,7 +54,7 @@ describe('disk-free widget', () => {
     expect(r.free).toBe('29 GB');
     expect(r.color).toBe(GREEN);
     expect(r.ring).toBe(GREEN);
-    expect(r.full).toBe('88%');      // 88% full, but green because 29 GB free
+    expect(r.pct).toBe('12%');       // 12% free (88% full) — green because 29 GB free
     expect(r.sub).toBe('free · of 245 GB');
   });
 

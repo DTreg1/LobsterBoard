@@ -145,7 +145,7 @@
     },
     preview: `<div style="text-align:center;padding:8px;">
       <div style="font-size:20px;color:#3fb950;">29 GB</div>
-      <div style="font-size:11px;color:#8b949e;">free · 88% full</div>
+      <div style="font-size:11px;color:#8b949e;">12% free · of 245 GB</div>
     </div>`,
     generateHtml: (props) => `
       <div class="dash-card" id="widget-${props.id}" style="height:100%;">
@@ -200,14 +200,18 @@
           : Math.max(0, size - (d.used || 0));
         const freeGB = freeBytes / GB;
         const totalGB = size / GB;
-        const pctFull = size > 0 ? Math.max(0, Math.min(100, (size - freeBytes) / size * 100)) : 0;
+        const pctFree = size > 0 ? Math.max(0, Math.min(100, freeBytes / size * 100)) : 0;
+        const pctFull = 100 - pctFree;
         const warn = ${Number(props.warnGB) || 20};
         const crit = ${Number(props.critGB) || 10};
         const color = freeGB <= crit ? '#f85149' : (freeGB <= warn ? '#d29922' : '#3fb950');
         const circ = 125.66;
+        // Ring ARC fills with container fullness (a nearly-full ring is the at-a-glance
+        // "disk filling up" danger cue), while the center label shows the FREE % that
+        // matches this widget's free-GB headline. They're deliberately complements.
         ringEl.style.strokeDashoffset = circ - (pctFull / 100) * circ;
         ringEl.style.stroke = color;
-        pctEl.textContent = Math.round(pctFull) + '%';
+        pctEl.textContent = Math.round(pctFree) + '%';
         freeEl.textContent = (freeGB < 10 ? freeGB.toFixed(1) : Math.round(freeGB)) + ' GB';
         freeEl.style.color = color;
         subEl.textContent = 'free · of ' + Math.round(totalGB) + ' GB';
