@@ -1058,10 +1058,12 @@
       initDragDrop();
       initControls();
       initProperties();
+      initServers();
       loadConfig(); // Loads config and renders widgets
       // setEditMode(false) is called inside loadConfig()
-      
+
       // Initialize button event handlers
+      document.getElementById('btn-security').addEventListener('click', openSecurityModal);
       document.getElementById('btn-edit-layout').addEventListener('click', requestEditMode);
       document.getElementById('btn-done-editing').addEventListener('click', () => {
         saveConfig();

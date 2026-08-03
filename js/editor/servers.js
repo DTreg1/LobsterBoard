@@ -12,6 +12,15 @@
 
   window._escHtml = _escHtml;
 
+  window.initServers = function initServers() {
+    document.getElementById('btn-servers').addEventListener('click', openServersModal);
+    document.getElementById('servers-close').addEventListener('click', function() {
+      document.getElementById('servers-modal').style.display = 'none';
+    });
+    document.getElementById('server-add-btn').addEventListener('click', addServer);
+    document.getElementById('server-test-btn').addEventListener('click', testServerConnection);
+  };
+
   window.openServersModal = async function openServersModal() {
     document.getElementById('servers-modal').style.display = 'flex';
     await loadServersList();
