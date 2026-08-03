@@ -43,6 +43,7 @@
         }
       }
       state.widgets = config.widgets || [];
+      if (window.refreshLibraryUsage) window.refreshLibraryUsage();
       document.documentElement.style.setProperty('--font-scale', state.fontScale);
       var fontScaleEl = document.getElementById('font-scale');
       if (fontScaleEl) fontScaleEl.value = String(state.fontScale);

@@ -305,6 +305,26 @@ body {
   font-weight: 600;
 }
 
+/* "on your dashboard" count. Deliberately NOT the green check: .widget-verified
+   is a static "tested by the project" badge and says nothing about your board.
+   Uses --accent-blue so the two read as different kinds of information. */
+.widget-in-use {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--accent-blue);
+  background: color-mix(in srgb, var(--accent-blue) 15%, transparent);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* the badge already carries the count; the rail is the at-a-glance scan cue */
+.widget-item.in-use {
+  border-color: var(--accent-blue);
+  box-shadow: inset 3px 0 0 var(--accent-blue);
+}
+
 /* Canvas Area */
 .canvas-area {
   flex: 1;

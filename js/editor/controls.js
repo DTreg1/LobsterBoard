@@ -57,6 +57,7 @@
           if (el) el.remove();
         });
         state.widgets = [];
+        if (window.refreshLibraryUsage) window.refreshLibraryUsage();
         selectWidget(null);
         updateCanvasInfo();
         updateEmptyState();

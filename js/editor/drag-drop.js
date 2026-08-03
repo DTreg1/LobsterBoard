@@ -96,6 +96,7 @@
     }
 
     state.widgets.push(widget);
+    if (window.refreshLibraryUsage) window.refreshLibraryUsage();
 
     if (isScrollableMode()) {
       updateCanvasSize(true);

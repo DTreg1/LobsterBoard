@@ -316,7 +316,10 @@
     }
 
     // Show server dropdown for system/remote widgets
-    var systemWidgets = ['uptime-monitor', 'docker-containers', 'disk-usage', 'network-speed', 'cpu-memory', 'ai-usage', 'openclaw-release', 'auth-status', 'cron-jobs', 'system-log', 'session-count', 'activity-list'];
+    // Must list every widget whose generateJs routes through onStats(props.server)
+    // or /api/servers/<id>/stats — omissions silently hide the Server dropdown, so
+    // the widget can only ever read local data. 'disk-free' was missing.
+    var systemWidgets = ['uptime-monitor', 'docker-containers', 'disk-usage', 'disk-free', 'network-speed', 'cpu-memory', 'ai-usage', 'openclaw-release', 'auth-status', 'cron-jobs', 'system-log', 'session-count', 'activity-list'];
     var serverGroup = document.getElementById('prop-server-group');
     if (serverGroup && systemWidgets.includes(widget.type)) {
       serverGroup.style.display = 'block';

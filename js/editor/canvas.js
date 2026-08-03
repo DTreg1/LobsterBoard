@@ -297,6 +297,7 @@
     if (idx === -1) return;
 
     state.widgets.splice(idx, 1);
+    if (window.refreshLibraryUsage) window.refreshLibraryUsage();
     document.getElementById(id)?.remove();
     window.selectWidget(null);
     window.updateCanvasInfo();

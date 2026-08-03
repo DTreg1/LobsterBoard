@@ -19,6 +19,45 @@
     // Add any widget-specific event handlers or customizations here
     initWidgetCategories();
     initWidgetSearch();
+    refreshLibraryUsage();
+  };
+
+  /**
+   * Mark library entries that are already placed on the dashboard, with a count.
+   *
+   * This is distinct from the ✓ .widget-verified badge, which is static markup
+   * meaning "tested by the project" — it says nothing about the current board,
+   * which reads as "already added" and is why this was added.
+   *
+   * Safe to call before the library exists; it just finds no items.
+   */
+  window.refreshLibraryUsage = function refreshLibraryUsage() {
+    var counts = {};
+    var placed = (window.BuilderState && window.BuilderState.widgets) || [];
+    placed.forEach(function(w) {
+      if (w && w.type) counts[w.type] = (counts[w.type] || 0) + 1;
+    });
+
+    document.querySelectorAll('.widget-item[data-widget]').forEach(function(item) {
+      var n = counts[item.getAttribute('data-widget')] || 0;
+      var badge = item.querySelector('.widget-in-use');
+
+      item.classList.toggle('in-use', n > 0);
+
+      if (!n) {
+        if (badge) badge.remove();
+        return;
+      }
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'widget-in-use';
+        item.appendChild(badge);
+      }
+      badge.textContent = n > 1 ? 'on board ×' + n : 'on board';
+      badge.title = n > 1
+        ? n + ' copies of this widget are on your dashboard'
+        : 'This widget is on your dashboard';
+    });
   };
   
   function initWidgetCategories() {
